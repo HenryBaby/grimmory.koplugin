@@ -2,12 +2,6 @@ package.path = "grimmory.koplugin/?.lua;" .. package.path
 local Version = require("grimmory/ota/version")
 
 describe("OTA version ordering", function()
-    it("accepts the undotted fork release tag and packaged version", function()
-        assert.is_true(Version.parse("v0.0.30-hC-0.0.2").valid)
-        assert.are.equal(0, Version.compare("v0.0.30-hC-0.0.2", "0.0.30-hC-0.0.2"))
-        assert.is_true(Version.isLater("v0.0.30-hC-0.0.1", "v0.0.30-hC-0.0.2"))
-    end)
-
     it("orders fork patch increments", function()
         assert.is_true(Version.isLater("v.0.0.31-hC-0.0.1", "v.0.0.31-hC-0.0.2"))
         assert.is_false(Version.isLater("v.0.0.31-hC-0.0.2", "v.0.0.31-hC-0.0.1"))

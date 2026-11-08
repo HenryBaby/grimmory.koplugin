@@ -269,11 +269,7 @@ local function get_child(tokens, child_index)
         node_counter = node_counter + 1
 
         if token.type == "text" then
-            -- Empty strings get no text node in crengine, so text() indexes
-            -- only the non-empty ones.  node_counter still counts every slot.
-            if token.text ~= "" then
-                match_counters["text()"] = (match_counters["text()"] or 0) + 1
-            end
+            match_counters["text()"] = (match_counters["text()"] or 0) + 1
         elseif token.type == "tag" then
             match_counters[token.text] = (match_counters[token.text] or 0) + 1
         end

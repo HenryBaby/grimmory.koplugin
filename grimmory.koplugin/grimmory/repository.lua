@@ -1,6 +1,5 @@
 local SQ3 = require("lua-ljsqlite3/init")
 local DataStorage = require("datastorage")
-local ffiUtil = require("ffi/util")
 local util = require("util")
 
 local GrimmoryLogger = require("grimmory/logger")
@@ -149,10 +148,7 @@ end
 ---@return integer | nil book_id
 ---@return integer | nil grimmory_id
 function GrimmoryLocalRepository:upsertBook(book_path, grimmory_id)
-    -- Resolve path for file.
-    local absolute_book_path = ffiUtil.realpath(book_path)
-
-    local partial_md5 = util.partialMD5(absolute_book_path)
+    local partial_md5 = util.partialMD5(book_path)
 
     local ok, book = with_database(
         self.database_path,
@@ -168,7 +164,7 @@ function GrimmoryLocalRepository:upsertBook(book_path, grimmory_id)
                 VALUES (?, ?);
             ]])
 
-            insert_stmt:bind(absolute_book_path, partial_md5)
+            insert_stmt:bind(book_path, partial_md5)
             insert_stmt:step()
             insert_stmt:close()
 
@@ -182,7 +178,7 @@ function GrimmoryLocalRepository:upsertBook(book_path, grimmory_id)
                 WHERE book_path = ? AND partial_md5 = ?
             ]])
 
-            select_stmt:bind(absolute_book_path, partial_md5)
+            select_stmt:bind(book_path, partial_md5)
             local row = select_stmt:step()
             select_stmt:close()
 
@@ -218,7 +214,7 @@ function GrimmoryLocalRepository:upsertBook(book_path, grimmory_id)
     )
 
     if not ok or not book then
-        logger:err("Failed to upsert book:", absolute_book_path, "-", book)
+        logger:err("Failed to upsert book:", book_path, "-", book)
         return false, nil, nil
     end
 
@@ -264,9 +260,6 @@ end
 ---@return integer | nil book_id
 ---@return integer | nil grimmory_id
 function GrimmoryLocalRepository:findBookByFile(book_path, partial_md5)
-    -- Resolve path for file.
-    local absolute_book_path = ffiUtil.realpath(book_path)
-
     local ok, book = with_database(
         self.database_path,
         function(conn)
@@ -281,7 +274,7 @@ function GrimmoryLocalRepository:findBookByFile(book_path, partial_md5)
                     partial_md5 = ?
             ]])
 
-            select_stmt:bind(absolute_book_path, partial_md5)
+            select_stmt:bind(book_path, partial_md5)
             local row = select_stmt:step()
             select_stmt:close()
 
@@ -297,12 +290,12 @@ function GrimmoryLocalRepository:findBookByFile(book_path, partial_md5)
     )
 
     if not ok then
-        logger:err("Failed to find book:", absolute_book_path, partial_md5, "-", book)
+        logger:err("Failed to find book:", book_path, partial_md5, "-", book)
         return false, nil, nil
     end
 
     if not book then
-        logger:dbg("Book query succees but did not find book:", absolute_book_path, partial_md5)
+        logger:dbg("Book query succees but did not find book:", book_path, partial_md5)
         return true, nil, nil
     end
 
