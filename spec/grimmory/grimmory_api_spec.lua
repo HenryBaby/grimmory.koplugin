@@ -91,7 +91,7 @@ end
 
 describe("GrimmoryAPI", function()
     describe("getBooks", function()
-        it("parses library fields from paged books", function()
+        it("parses library fields and reading status together from paged books", function()
             local api = GrimmoryAPI:new()
 
             function api:request(_, path)
@@ -102,6 +102,7 @@ describe("GrimmoryAPI", function()
                             id = 10,
                             libraryId = 3,
                             libraryName = "Ebooks",
+                            readStatus = "READ",
                             addedOn = "2026-01-01T00:00:00Z",
                             shelves = {},
                             metadata = {},
@@ -122,6 +123,7 @@ describe("GrimmoryAPI", function()
             assert.are.equal(1, total)
             assert.are.equal(3, books[1].library_id)
             assert.are.equal("Ebooks", books[1].library_name)
+            assert.are.equal("READ", books[1].read_status)
         end)
 
         it("iterates parsed books", function()
@@ -203,4 +205,49 @@ describe("GrimmoryAPI", function()
             assert.are.equal("Archive", libraries[1].name)
         end)
     end)
+    describe("getBook", function()
+        it("parses Read status from a single book", function()
+            local api = GrimmoryAPI:new()
+            api.request = function(_, method, path)
+                assert.equals("GET", method)
+                assert.equals("/api/v1/books/7", path)
+                return true, 200, { id = 7, readStatus = "READ" }
+            end
+            local ok, book = api:getBook(7)
+            assert.is_true(ok)
+            assert.equals("READ", book.read_status)
+        end)
+
+        it("ignores missing and non-string null statuses", function()
+            for _, raw in ipairs({ { id = 7 }, { id = 7, readStatus = {} } }) do
+                local api = GrimmoryAPI:new()
+                api.request = function() return true, 200, raw end
+                local ok, book = api:getBook(7)
+                assert.is_true(ok)
+                assert.is_nil(book.read_status)
+            end
+        end)
+
+        it("rejects failed or malformed book responses", function()
+            for _, response in ipairs({ "error", {}, { id = 8 } }) do
+                local api = GrimmoryAPI:new()
+                api.request = function() return true, 200, response end
+                assert.is_false(api:getBook(7))
+            end
+            local api = GrimmoryAPI:new()
+            api.request = function() return false, 500, {} end
+            assert.is_false(api:getBook(7))
+        end)
+
+        it("also parses status in paged books", function()
+            local api = GrimmoryAPI:new()
+            api.request = function()
+                return true, 200, { content = { { id = 7, readStatus = "READ" } } }
+            end
+            local ok, books = api:getBooksPage(0)
+            assert.is_true(ok)
+            assert.equals("READ", books[1].read_status)
+        end)
+    end)
+
 end)
